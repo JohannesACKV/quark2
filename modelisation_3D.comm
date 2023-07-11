@@ -1,4 +1,4 @@
-b newb
+newb
 
 
 DEBUT(
@@ -10,7 +10,7 @@ DEBUT(
 # MESH
 #---------------------------------------------------
 # read the mesh
-Mesh=LIRE_MAILLAGE(FORMAT='MED', INFO=222,)
+Mesh=LIRE_MAILLAGE(FORMAT='MED', INFO=444,)
 
 # make the elm normals of face elements point outwards
 Mesh=MODI_MAILLAGE(reuse =Mesh,
