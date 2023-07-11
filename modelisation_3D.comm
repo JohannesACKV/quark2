@@ -1,0 +1,98 @@
+b newb
+
+
+DEBUT(
+      #LANG='FR', # default: messages in french
+      #LANG='EN', #          messages in english
+      )
+
+#---------------------------------------------------
+# MESH
+#---------------------------------------------------
+# read the mesh
+Mesh=LIRE_MAILLAGE(FORMAT='MED', INFO=222,)
+
+# make the elm normals of face elements point outwards
+Mesh=MODI_MAILLAGE(reuse =Mesh,
+                   MAILLAGE=Mesh,
+                   ORIE_PEAU_3D=_F(GROUP_MA=('FIXED_EL','LOADD_EL',),),)
+
+#---------------------------------------------------
+# MODELISATION MECHANIC
+# Element types
+#---------------------------------------------------
+
+Model=AFFE_MODELE(MAILLAGE=Mesh,
+                  AFFE=_F(TOUT='OUI',
+                          PHENOMENE='MECANIQUE',
+                          MODELISATION='3D',),)
+
+#---------------------------------------------------
+# MATERIAL AND MATERIAL FIELD
+#---------------------------------------------------
+
+Mat =DEFI_MATERIAU(ELAS=_F(E=2,
+                           NU=0.0,
+                           RHO=0.5e-6,
+                           ALPHA=1e-3,),)
+
+# a simple uniform material field
+Matfield=AFFE_MATERIAU(MAILLAGE=Mesh,
+                       AFFE=(
+                             _F(TOUT='OUI',  MATER=Mat ,),
+                            )
+                      )
+
+#  Mat2=DEFI_MATERIAU(ELAS=_F(E=200000.0,
+#                             NU=0.0,
+#                             RHO=0.5e-6,
+#                             ALPHA=1e-3,),)
+
+#  # group-wise assigned materials
+#  Matfiel2=AFFE_MATERIAU(MAILLAGE=Mesh,
+#                         AFFE=(
+#                               _F(GROUP_MA='PART_1',  MATER=Mat ,),
+#                               _F(GROUP_MA='PART_2',  MATER=Mat2,),
+#                              )
+#                        )
+
+#---------------------------------------------------
+# MECHANICAL LOADS AND BOUNDARY CONDITIONS
+#---------------------------------------------------
+#
+# fix CERTAIN DOFs (which must exist on the nodes attached to GROUP_MA='FIXED_EL')
+fixed=AFFE_CHAR_MECA(MODELE=Model,
+                     DDL_IMPO=_F(GROUP_MA='FIXED_EL',
+                                 DX=0.0,
+                                 DY=0.0,
+                                 DZ=0.0,),)
+
+# fix ALL DOFs which ever exist on the nodes attached to GROUP_MA='FIXED_EL'
+encastre=AFFE_CHAR_MECA(MODELE=Model,
+                        DDL_IMPO=_F(GROUP_MA='FIXED_EL',
+                                    LIAISON='ENCASTRE',),)
+
+# Load Case "Shear": Force-per-face (FORCE_FACE) on top face of box
+Y_ForFac=AFFE_CHAR_MECA(MODELE=Model,
+                        FORCE_FACE=_F(GROUP_MA='LOADD_EL',
+                                      FY=-50.0,),)
+# Load Case "Axial": Negative pressure (PRES_REP) on top face of box
+pressure=AFFE_CHAR_MECA(MODELE=Model,
+                        PRES_REP=_F(GROUP_MA='LOADD_EL',
+                                    PRES=-50.0,),)
+
+#---------------------------------------------------
+# SOLVER and Postprocessing, one Load Case
+#---------------------------------------------------
+
+# MECA_STATIQUE will create 2 output-fields: DEPL (displacement) and SIEF_ELGA (stresses at GaussPoints)
+# Load Case can be changed in EXCIT( _F(CHARGE=..) )
+Result=MECA_STATIQUE(MODELE=Model,
+                     CHAM_MATER=Matfield,
+                     
+                     
+                     EXCIT=(_F(CHARGE=fixed,),
+                            _F(CHARGE=Y_ForFac,),),)
+
+
+FIN()
